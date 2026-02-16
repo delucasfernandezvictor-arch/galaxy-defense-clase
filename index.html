@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Idiom Galaxy Defense</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b0c15;
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #1a1c29 0%, #000000 100%);
+        }
+
+        /* UI Layers */
+        .ui-layer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* Top HUD */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px #00ffff;
+        }
+
+        .score-box {
+            font-size: 24px;
+            color: #00ffff;
+        }
+
+        .lives-box {
+            font-size: 24px;
+            color: #ff0055;
+        }
+
+        .progress-box {
+            font-size: 18px;
+            color: #ffff00;
+            margin-top: 5px;
+        }
+
+        /* Idiom Display (Center Top) */
+        #current-mission {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 90%;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translateX(-50%) scale(1);
+            }
+
+            50% {
+                transform: translateX(-50%) scale(1.02);
+            }
+
+            100% {
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        #idiom-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            display: inline-block;
+        }
+
+        #idiom-meaning {
+            font-size: 16px;
+            color: #aaaaaa;
+            margin-top: 5px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .highlight {
+            color: #ffff00;
+            text-decoration: underline;
+        }
+
+        /* Screens */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 12, 21, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: auto;
+            transition: opacity 0.3s;
+            overflow-y: auto;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            background: linear-gradient(90deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.2s;
+            margin-top: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            min-width: 250px;
+        }
+
+        .btn:hover {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+
+        .btn:disabled {
+            border-color: #555;
+            color: #555;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .btn-ai {
+            border-color: #ff00ff;
+            color: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.2);
+        }
+
+        .btn-ai:hover {
+            background: #ff00ff;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.6);
+        }
+
+        .btn-stats {
+            border-color: #ffff00;
+            color: #ffff00;
+            box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
+        }
+
+        .btn-stats:hover {
+            background: #ffff00;
+            color: #000;
+            box-shadow: 0 0 30px rgba(255, 255, 0, 0.6);
+        }
+
+        .instructions {
+            text-align: center;
+            max-width: 600px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+
+        /* Inputs Style */
+        .input-sci-fi {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ffff;
+            color: #fff;
+            padding: 10px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            text-align: center;
+            margin: 5px;
+            border-radius: 5px;
+            outline: none;
+            width: 250px;
+        }
+
+        .input-sci-fi:focus {
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        /* AI Modal Styles */
+        .ai-input-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #ai-topic-input {
+            padding: 10px;
+            font-family: 'Roboto', sans-serif;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #ff00ff;
+            color: #fff;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-left-color: #ff00ff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Canvas */
+        canvas {
+            display: block;
+        }
+
+        /* Effects */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-2px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(4px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-8px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(8px, 0, 0);
+            }
+        }
+
+        /* New Explanation Box Style */
+        .explanation-card {
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #ff0055;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-width: 90%;
+            width: 500px;
+            max-height: 40vh;
+            /* Permite scroll si hay muchos errores */
+            overflow-y: auto;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.2);
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00ffff;
+            border-radius: 4px;
+        }
+
+        .explanation-card::-webkit-scrollbar-thumb {
+            background: #ff0055;
+        }
+
+        .mistake-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 0;
+            text-align: left;
+        }
+
+        .mistake-item:last-child {
+            border-bottom: none;
+        }
+
+        .mistake-phrase {
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .mistake-meaning {
+            color: #ccc;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* Admin Lock Styles */
+        .admin-lock-panel {
+            margin-top: 20px;
+            background: rgba(20, 0, 0, 0.8);
+            border: 1px solid #ff0000;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-msg {
+            color: red;
+            font-size: 12px;
+            display: none;
+        }
+
+        /* STATS TABLE STYLES */
+        .stats-container {
+            width: 90%;
+            max-width: 800px;
+            height: 70vh;
+            background: rgba(0, 20, 40, 0.95);
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Roboto', sans-serif;
+            margin-top: 10px;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            border: 1px solid #334455;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .stats-table th {
+            background-color: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .stats-table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-table tr:hover {
+            background-color: rgba(0, 255, 255, 0.1);
+        }
+
+        .rank-cell {
+            font-family: 'Orbitron';
+            color: #ffff00;
+            text-align: center;
+        }
+
+        .score-cell {
+            font-weight: bold;
+            color: #00ffff;
+        }
+
+        .stats-subtitle {
+            color: #ff00ff;
+            font-family: 'Orbitron';
+            font-size: 16px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ff00ff;
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Leaderboard Box */
+        .leaderboard-box {
+            margin-top: 20px;
+            background: rgba(0, 0, 20, 0.8);
+            border: 1px solid #00ffff;
+            padding: 15px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .lb-title {
+            color: #00ffff;
+            font-family: 'Orbitron';
+            font-size: 18px;
+            margin-bottom: 10px;
+            text-decoration: underline;
+        }
+
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .lb-highlight {
+            color: #ffff00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-container">
+        <!-- UI -->
+        <div class="ui-layer">
+            <div class="hud-top">
+                <div class="score-box">SCORE: <span id="score">0</span></div>
+                <div class="lives-box">LIVES: <span id="lives">3</span></div>
+            </div>
+            <!-- Progress Indicator -->
+            <div style="position:absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center;">
+                <div class="progress-box">MISIONES: <span id="progress-count">0</span>/15</div>
+            </div>
+
+            <div id="current-mission" class="hidden">
+                <div id="idiom-text">Break a <span style="color:#ff0055">____</span></div>
+                <div id="idiom-meaning">Meaning: Good Luck</div>
+            </div>
+        </div>
+
+        <!-- Start Menu -->
+        <div id="start-screen" class="screen">
+            <h1>Idiom Galaxy</h1>
+
+            <div class="instructions" style="margin-bottom: 20px;">
+                <p>Ingresa tus datos para comenzar la misión.</p>
+                <input type="text" id="player-name" class="input-sci-fi" placeholder="Nombre Real">
+                <input type="number" id="player-group" class="input-sci-fi" placeholder="Número de Grupo">
+                <p id="start-error" class="error-msg" style="color: #ff0055; margin-top:5px; display:none;">Debes
+                    rellenar nombre y grupo</p>
+            </div>
+
+            <button class="btn" onclick="startGame()">START MISSION</button>
+            <button class="btn btn-ai" onclick="toggleAIModal()">✨ Custom Mission</button>
+            <button class="btn btn-stats" style="margin-top: 10px;" onclick="showStats()">VER ESTADÍSTICAS</button>
+
+            <!-- Leaderboard Display -->
+            <div id="leaderboard-display" class="leaderboard-box">
+                <div class="lb-title">ESTADO LOCAL</div>
+                <div class="lb-row">
+                    <span>Último Jugador:</span>
+                    <span id="lb-last-player" class="lb-highlight">-</span>
+                </div>
+            </div>
+
+            <!-- AI Mission Modal inside Start Screen -->
+            <div id="ai-modal"
+                style="display:none; margin-top:20px; background:rgba(0,0,0,0.8); padding:20px; border-radius:10px; border:1px solid #ff00ff;">
+                <p style="color:#ff00ff; margin:0 0 10px 0;">Create a custom level</p>
+                <input type="text" id="ai-topic-input" placeholder="Topic (e.g., Animals, Tech)">
+                <button class="btn btn-ai" style="margin-top:10px; min-width:150px; padding:10px;"
+                    onclick="generateAIMissions()">
+                    Generate
+                    <span id="ai-loader" class="loader" style="display:none;"></span>
+                </button>
+                <div id="ai-status" style="margin-top:10px; font-size:12px; color:#aaa;"></div>
+            </div>
+        </div>
+
+        <!-- Stats Screen (New Database View) -->
+        <div id="stats-screen" class="screen hidden" style="background: rgba(0,0,0,0.95);">
+            <h2 style="color: #00ffff; font-family: 'Orbitron'; margin-bottom: 15px;">ESTADÍSTICAS GALÁCTICAS</h2>
+
+            <div class="stats-container">
+
+                <!-- INDIVIDUAL TABLE -->
+                <div class="stats-subtitle">Ranking de Pilotos (Individual)</div>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>NOMBRE</th>
+                            <th>GRUPO</th>
+                            <th>PUNTUACIÓN</th>
+                            <th style="color:#ff0055;">SANCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-table-body">
+                        <!-- JS Fills this -->
+                    </tbody>
+                </table>
+
+                <!-- GROUP TABLE -->
+                <div class="stats-subtitle">Ranking de Escuadrones (Grupal)</div>
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>GRUPO</th>
+                            <th>TOTAL PUNTOS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-groups-body">
+                        <!-- JS Fills this -->
+                    </tbody>
+                </table>
+
+            </div>
+
+            <!-- Reset Database Panel -->
+            <div
+                style="margin-top: 20px; border-top: 1px solid #333; padding-top: 10px; width: 80%; max-width: 400px; text-align: center;">
+                <p style="color: #666; font-size: 10px; margin-bottom: 5px; letter-spacing: 1px;">ADMINISTRACIÓN:
+                    RESETEAR DATOS</p>
+                <div style="display: flex; gap: 10px; justify-content: center; align-items: center;">
+                    <input type="password" id="reset-password" class="input-sci-fi" placeholder="Contraseña Admin"
+                        style="width: 150px; padding: 8px; font-size: 12px;">
+                    <button class="btn"
+                        style="min-width: auto; padding: 8px 20px; font-size: 12px; border-color: #ff0055; color: #ff0055; margin-top:0;"
+                        onclick="resetDatabase()">BORRAR TODO</button>
+                </div>
+                <p id="reset-status" style="font-size: 12px; height: 15px; margin-top: 5px;"></p>
+            </div>
+
+            <button class="btn" style="margin-top: 10px;" onclick="closeStats()">CERRAR</button>
+        </div>
+
+        <!-- Game Over / Win Screen -->
+        <div id="game-over-screen" class="screen hidden">
+            <h1 id="end-title" style="color: #ff0055; -webkit-text-fill-color: #ff0055;">GAME OVER</h1>
+            <p id="end-message" style="color: #fff; font-size: 18px; text-align: center; max-width: 80%;">Has fallado la
+                misión.</p>
+
+            <p>Score Final: <span id="final-score" style="color:#fff; font-weight:bold;">0</span></p>
+
+            <!-- Updated Explanation Card to hold list -->
+            <div class="explanation-card" id="mistakes-container">
+                <!-- JS fills this with list of mistakes -->
+            </div>
+
+            <!-- Admin Lock -->
+            <div class="admin-lock-panel">
+                <p style="margin:0; font-size:14px; color:#aaa;">BLOQUEADO POR SEGURIDAD</p>
+                <input type="password" id="admin-password" class="input-sci-fi" placeholder="Contraseña Profesor"
+                    style="width: 200px; font-size: 14px;">
+                <button class="btn" style="padding: 10px 20px; min-width: auto; margin-top:5px; font-size:14px;"
+                    onclick="checkPasswordAndReturn()">DESBLOQUEAR</button>
+                <p id="password-error" class="error-msg">Contraseña incorrecta</p>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN PARA USO LOCAL (CLASE)
+        // ==========================================
+
+        // ¡AQUÍ ESTÁ TU CLAVE! PEGA AQUÍ LA TUYA SI CAMBIA
+        const apiKey = "AIzaSyCaNotylKxZKuYs8Jf_fZHcJOiISqoCahI";
+
+
+        // ==========================================
+
+        async function callGemini(prompt) {
+            // Si no hay API key, devolvemos null para activar el fallback offline
+            if (!apiKey || apiKey === "BORRA_ESTO_Y_PEGA_TU_CLAVE_AQUI") {
+                console.warn("API Key not found or placeholder used.");
+                return null;
+            }
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            // Retry logic with exponential backoff
+            let delay = 1000;
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Server responded with ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                } catch (error) {
+                    console.warn(`Intento ${i + 1} fallido:`, error);
+                    if (i === 4) return null; // Si fallan los 5 intentos
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2; // Esperar 1s, 2s, 4s, 8s, 16s
+                }
+            }
+            return null;
+        }
+
+        // --- AI Features ---
+
+        function toggleAIModal() {
+            const modal = document.getElementById('ai-modal');
+            modal.style.display = modal.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function generateAIMissions() {
+            const topicInput = document.getElementById('ai-topic-input');
+            const topic = topicInput.value || "Random";
+            const loader = document.getElementById('ai-loader');
+            const status = document.getElementById('ai-status');
+
+            loader.style.display = 'inline-block';
+            status.innerText = "Consultando la base de datos galáctica...";
+            status.style.color = "#aaa";
+
+            const prompt = `Generate 5 English idioms related to the topic '${topic}'. 
+            Strictly return ONLY a JSON array with this structure, no markdown: 
+            [{
+                "phrase": "Start of phrase (e.g. Barking up the wrong)", 
+                "answer": "Ending word (e.g. Tree)", 
+                "meaning": "Meaning in Spanish", 
+                "distractors": ["Word1", "Word2", "Word3"]
+            }]`;
+
+            const resultText = await callGemini(prompt);
+            loader.style.display = 'none';
+
+            if (resultText) {
+                try {
+                    // Clean markdown if present
+                    const jsonStr = resultText.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const newIdioms = JSON.parse(jsonStr);
+
+                    if (Array.isArray(newIdioms) && newIdioms.length > 0) {
+                        activeIdiomDatabase = newIdioms;
+                        status.innerText = `¡Misión cargada: ${topic}!`;
+                        status.style.color = "#00ff00";
+                        setTimeout(() => startGame(), 1000);
+                    } else {
+                        throw new Error("Invalid format");
+                    }
+                } catch (e) {
+                    status.innerText = "Error procesando datos. Intenta otro tema.";
+                    status.style.color = "#ff0055";
+                    console.error(e);
+                }
+            } else {
+                // Fallback Offline Logic
+                console.log("Activando modo offline para:", topic);
+
+                // Mensaje amigable para el usuario si no hay API Key configurada
+                if (!apiKey || apiKey === "BORRA_ESTO_Y_PEGA_TU_CLAVE_AQUI") {
+                    status.innerText = "Modo Offline. Cargando lista principal.";
+                } else {
+                    status.innerText = "Error de conexión. Cargando lista principal.";
+                }
+
+                // Fallback específico (funciona siempre)
+                if (true) { // Forzamos fallback si la API falla
+                    activeIdiomDatabase = [...defaultIdioms];
+                    status.style.color = "#ffff00";
+                    setTimeout(() => startGame(), 1500);
+                }
+            }
+        }
+
+        /**
+         * GAME DATA: English Idioms Database (Offline Backup)
+         */
+        const defaultIdioms = [
+            { phrase: "Raining cats and", answer: "Dogs", meaning: "Llover a cántaros", distractors: ["Frogs", "Fish", "Cows", "Birds"] },
+            { phrase: "Hold your", answer: "Horses", meaning: "¡Para el carro! / Espera", distractors: ["Dogs", "Cats", "Tongue", "Breath"] },
+            { phrase: "Black", answer: "Sheep", meaning: "La oveja negra", distractors: ["Cat", "Dog", "Bird", "Wolf"] },
+            { phrase: "Let sleeping dogs", answer: "Lie", meaning: "No buscar problemas / dejar estar", distractors: ["Sleep", "Bark", "Run", "Eat"] },
+            { phrase: "Wild goose", answer: "Chase", meaning: "Búsqueda inútil / pérdida de tiempo", distractors: ["Hunt", "Run", "Race", "Game"] },
+            { phrase: "Butterflies in my", answer: "Stomach", meaning: "Nervios", distractors: ["Head", "Heart", "Hands", "Feet"] },
+            { phrase: "The elephant in the", answer: "Room", meaning: "Un problema obvio del que nadie habla", distractors: ["House", "Zoo", "Fridge", "Car"] },
+            { phrase: "Kill two birds with one", answer: "Stone", meaning: "Matar dos pájaros de un tiro", distractors: ["Rock", "Stick", "Shot", "Hand"] },
+            { phrase: "Pig", answer: "Out", meaning: "Comer muchísimo", distractors: ["In", "Up", "Down", "Away"] },
+            { phrase: "As busy as a", answer: "Bee", meaning: "Muy ocupado", distractors: ["Bird", "Cat", "Dog", "Ant"] },
+            { phrase: "Fish out of", answer: "Water", meaning: "Sentirse fuera de lugar", distractors: ["Sea", "Bowl", "Sand", "Air"] },
+            { phrase: "Bull in a china", answer: "Shop", meaning: "Ser muy torpe/bruto", distractors: ["Store", "House", "Room", "Box"] },
+            { phrase: "Ants in your", answer: "Pants", meaning: "No poder estar quieto", distractors: ["Shoes", "Hat", "Shirt", "Hands"] },
+            { phrase: "Barking up the wrong", answer: "Tree", meaning: "Equivocarse de persona/lugar", distractors: ["Dog", "House", "Pole", "Street"] },
+            { phrase: "Wolf in sheep's", answer: "Clothing", meaning: "Alguien peligroso que parece inofensivo", distractors: ["Skin", "Fur", "Coat", "House"] }
+        ];
+
+        let activeIdiomDatabase = [...defaultIdioms];
+
+        // Dynamic Deck for Randomization without repeats
+        let availableIdioms = [];
+        // Log of mistakes for Game Over
+        let mistakesLog = [];
+
+        // Player Stats
+        let playerName = "";
+        let playerGroup = "";
+        let idiomsSolved = 0;
+        const TOTAL_IDIOMS_TO_WIN = 15;
+        let tabSwitchCount = 0; // Anti-Cheat counter
+
+        // --- ANTI-CHEAT LISTENER ---
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden && gameRunning) {
+                tabSwitchCount++;
+                console.log("Player left tab. Warning recorded.");
+            }
+        });
+
+        // --- Game Engine Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        // Elements
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const progressCountEl = document.getElementById('progress-count');
+        const finalScoreEl = document.getElementById('final-score');
+        const idiomTextEl = document.getElementById('idiom-text');
+        const idiomMeaningEl = document.getElementById('idiom-meaning');
+        const missionPanel = document.getElementById('current-mission');
+        const container = document.getElementById('game-container');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const statsScreen = document.getElementById('stats-screen');
+        const endTitle = document.getElementById('end-title');
+        const endMessage = document.getElementById('end-message');
+        const mistakesContainer = document.getElementById('mistakes-container');
+
+        // Inputs
+        const nameInput = document.getElementById('player-name');
+        const groupInput = document.getElementById('player-group');
+        const startError = document.getElementById('start-error');
+
+        // Admin
+        const adminPassInput = document.getElementById('admin-password');
+        const passwordError = document.getElementById('password-error');
+
+        // Leaderboard UI (Menu)
+        const lbLastPlayer = document.getElementById('lb-last-player');
+
+        // State
+        let gameRunning = false;
+        let score = 0;
+        let lives = 3;
+        let frame = 0;
+        let currentLevel = 1;
+        let isGameFinished = false;
+
+        // Idiom Logic
+        let currentIdiom = null;
+        let waitingForClear = false;
+        let spawnTimer = 0;
+        let wordsSpawnedInWave = 0;
+        const WORDS_PER_WAVE = 5;
+
+        // Input
+        let mouseX = 0;
+        let mouseY = 0;
+        let isMouseDown = false;
+
+        // Entities
+        let player;
+        let bullets = [];
+        let enemies = [];
+        let particles = [];
+        let stars = [];
+
+        // --- Local Storage Management ---
+        function saveScoreData(pName, pGroup, pScore) {
+            let data = JSON.parse(localStorage.getItem('idiomGalaxyData')) || { users: [], groups: {} };
+
+            // Add user record
+            data.users.push({
+                name: pName,
+                group: pGroup,
+                score: pScore,
+                cheats: tabSwitchCount, // Save cheat count
+                date: new Date().toISOString()
+            });
+
+            // Update group total
+            if (!data.groups[pGroup]) {
+                data.groups[pGroup] = 0;
+            }
+            data.groups[pGroup] += pScore;
+
+            localStorage.setItem('idiomGalaxyData', JSON.stringify(data));
+            loadLeaderboard(); // Update menu display
+        }
+
+        function loadLeaderboard() {
+            let data = JSON.parse(localStorage.getItem('idiomGalaxyData')) || { users: [], groups: {} };
+
+            // Update UI on start screen
+            if (data.users.length > 0) {
+                const lastUser = data.users[data.users.length - 1];
+                lbLastPlayer.innerText = `${lastUser.name} (${lastUser.score} pts)`;
+            } else {
+                lbLastPlayer.innerText = "-";
+            }
+        }
+
+        // --- Stats Table Logic ---
+        function showStats() {
+            startScreen.classList.add('hidden');
+            statsScreen.classList.remove('hidden');
+
+            let data = JSON.parse(localStorage.getItem('idiomGalaxyData')) || { users: [], groups: {} };
+
+            // --- 1. POPULATE INDIVIDUAL TABLE ---
+            const tbody = document.getElementById('stats-table-body');
+            tbody.innerHTML = '';
+
+            let users = data.users.sort((a, b) => b.score - a.score);
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">No hay registros aún.</td></tr>';
+            } else {
+                users.forEach((user, index) => {
+                    let tr = document.createElement('tr');
+
+                    // Cheater Highlight Logic
+                    let cheatStyle = (user.cheats && user.cheats > 0) ? "color: #ff0055; font-weight: bold;" : "color: #aaa;";
+                    let cheatText = (user.cheats && user.cheats > 0) ? `${user.cheats} ⚠️` : "0";
+
+                    tr.innerHTML = `
+                        <td class="rank-cell">${index + 1}</td>
+                        <td style="color:#fff;">${user.name}</td>
+                        <td style="color:#aaa;">Grupo ${user.group}</td>
+                        <td class="score-cell">${user.score}</td>
+                        <td style="${cheatStyle}; text-align: center;">${cheatText}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            // --- 2. POPULATE GROUP TABLE ---
+            const tbodyGroups = document.getElementById('stats-groups-body');
+            tbodyGroups.innerHTML = '';
+
+            // Convert groups object to array for sorting: [{group: "1", score: 1000}, ...]
+            let groupsArray = [];
+            for (let g in data.groups) {
+                groupsArray.push({ group: g, score: data.groups[g] });
+            }
+
+            // Sort by Score Descending
+            groupsArray.sort((a, b) => b.score - a.score);
+
+            if (groupsArray.length === 0) {
+                tbodyGroups.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#888;">No hay datos de grupos.</td></tr>';
+            } else {
+                groupsArray.forEach((g, index) => {
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="rank-cell" style="color:#ff00ff;">${index + 1}</td>
+                        <td style="color:#fff; font-weight:bold;">GRUPO ${g.group}</td>
+                        <td class="score-cell" style="color:#ff00ff;">${g.score}</td>
+                    `;
+                    tbodyGroups.appendChild(tr);
+                });
+            }
+        }
+
+        function resetDatabase() {
+            const passInput = document.getElementById('reset-password');
+            const statusEl = document.getElementById('reset-status');
+
+            // Ajuste: Acepta "Lexus", "lexus" o "LEXUS" y elimina espacios
+            if (passInput.value.trim().toLowerCase() === "lexus") {
+
+                // Borrado directo sin confirmación para evitar bloqueos del navegador
+                localStorage.removeItem('idiomGalaxyData');
+
+                // Feedback visual
+                statusEl.style.color = "#00ff00";
+                statusEl.innerText = "DATOS BORRADOS CORRECTAMENTE.";
+                passInput.value = "";
+
+                // Refrescar la tabla inmediatamente para ver que está vacía
+                showStats();
+                loadLeaderboard();
+
+            } else {
+                statusEl.style.color = "#ff0055";
+                statusEl.innerText = "Acceso denegado: Contraseña incorrecta.";
+            }
+        }
+
+        // Add Enter key support for reset password
+        document.getElementById('reset-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                resetDatabase();
+            }
+        });
+
+        function closeStats() {
+            statsScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // --- Classes ---
+
+        class Player {
+            constructor() {
+                this.width = 50;
+                this.height = 50;
+                this.x = width / 2;
+                this.y = height - 100;
+                this.color = '#00ffff';
+                this.engineColor = '#ff00ff';
+                this.shootTimer = 0;
+            }
+
+            update() {
+                this.x += (mouseX - this.x) * 0.15;
+                if (this.x < 30) this.x = 30;
+                if (this.x > width - 30) this.x = width - 30;
+                if (this.shootTimer > 0) this.shootTimer--;
+                if (isMouseDown && this.shootTimer <= 0) {
+                    this.shoot();
+                    this.shootTimer = 15;
+                }
+            }
+
+            shoot() {
+                bullets.push(new Bullet(this.x, this.y - 30));
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(0, -30);
+                ctx.lineTo(20, 20);
+                ctx.lineTo(0, 10);
+                ctx.lineTo(-20, 20);
+                ctx.closePath();
+                ctx.fill();
+                ctx.shadowColor = this.engineColor;
+                ctx.fillStyle = this.engineColor;
+                ctx.beginPath();
+                ctx.moveTo(-10, 20);
+                ctx.lineTo(10, 20);
+                ctx.lineTo(0, 35 + Math.random() * 15);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class Bullet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.speed = 15;
+                this.active = true;
+                this.width = 4;
+                this.height = 20;
+            }
+
+            update() {
+                this.y -= this.speed;
+                if (this.y < -50) this.active = false;
+            }
+
+            draw() {
+                ctx.fillStyle = '#ffff00';
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffff00';
+                ctx.fillRect(this.x - this.width / 2, this.y, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class WordEnemy {
+            constructor(text, isCorrect) {
+                this.text = text;
+                this.isCorrect = isCorrect;
+                this.width = ctx.measureText(text).width + 30;
+                this.height = 40;
+                this.x = Math.random() * (width - 100) + 50;
+                this.y = -50;
+                this.speed = (1.5 + Math.random()) + (currentLevel * 0.2);
+                this.active = true;
+                this.angle = (Math.random() - 0.5) * 0.2;
+                this.color = isCorrect ? '#ffffff' : '#dddddd';
+                this.borderColor = '#ff0055';
+            }
+
+            update() {
+                this.y += this.speed;
+                this.x += Math.sin(this.y * 0.02) * 0.5;
+                if (this.y > height + 50) {
+                    this.active = false;
+                    if (this.isCorrect) {
+                        // LOG MISTAKE: Correct word fell off screen
+                        logMistake(currentIdiom);
+                        loseLife("Lost correct word");
+                        resetWave();
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.fillStyle = 'rgba(20, 0, 10, 0.8)';
+                ctx.strokeStyle = this.borderColor;
+                ctx.lineWidth = 2;
+                let w = ctx.measureText(this.text).width + 20;
+                let h = 36;
+                ctx.beginPath();
+                ctx.moveTo(-w / 2, -h / 2);
+                ctx.lineTo(w / 2, -h / 2);
+                ctx.lineTo(w / 2 + 10, 0);
+                ctx.lineTo(w / 2, h / 2);
+                ctx.lineTo(-w / 2, h / 2);
+                ctx.lineTo(-w / 2 - 10, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 20px Roboto';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.text, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.life = 1.0;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.05;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // --- Core Functions ---
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            if (player) {
+                player.y = height - 100;
+                player.x = width / 2;
+            }
+        }
+        window.addEventListener('resize', resize);
+
+        // Initial Load
+        loadLeaderboard();
+
+        function startGame() {
+            // Validate Inputs
+            playerName = nameInput.value.trim();
+            playerGroup = groupInput.value.trim();
+
+            if (!playerName || !playerGroup) {
+                startError.style.display = 'block';
+                return;
+            }
+            startError.style.display = 'none';
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            missionPanel.classList.remove('hidden');
+
+            resize();
+
+            player = new Player();
+            bullets = [];
+            enemies = [];
+            particles = [];
+            score = 0;
+            lives = 3;
+            currentLevel = 1;
+            frame = 0;
+            idiomsSolved = 0;
+            isGameFinished = false;
+
+            // Init Logic
+            mistakesLog = []; // Reset log
+            availableIdioms = [...activeIdiomDatabase]; // Clone master list
+            tabSwitchCount = 0; // Reset cheat counter
+
+            updateUI();
+            startNewIdiom();
+
+            gameRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function returnToMenu() {
+            // Reset Admin Field
+            adminPassInput.value = "";
+            passwordError.style.display = "none";
+
+            gameRunning = false;
+            gameOverScreen.classList.add('hidden');
+            missionPanel.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+
+            // Reload Leaderboard to show updated group score
+            loadLeaderboard();
+        }
+
+        // Admin Check
+        function checkPasswordAndReturn() {
+            if (adminPassInput.value.trim() === "alfonso") {
+                returnToMenu();
+            } else {
+                passwordError.style.display = "block";
+                adminPassInput.value = "";
+            }
+        }
+
+        function startNewIdiom() {
+            // Win Condition Check
+            if (idiomsSolved >= TOTAL_IDIOMS_TO_WIN || availableIdioms.length === 0) {
+                winGame();
+                return;
+            }
+
+            // Pick random from AVAILABLE
+            let index = Math.floor(Math.random() * availableIdioms.length);
+            currentIdiom = availableIdioms[index];
+
+            // Remove from available so it doesn't repeat immediately
+            availableIdioms.splice(index, 1);
+
+            let displayPhrase = currentIdiom.customQuestion || (currentIdiom.phrase + " ____");
+            let displayMeaning = currentIdiom.meaning;
+
+            idiomTextEl.innerHTML = displayPhrase.replace("____", "<span style='color:#ff0055'>____</span>");
+            idiomMeaningEl.innerText = displayMeaning;
+
+            waitingForClear = false;
+            wordsSpawnedInWave = 0;
+            spawnTimer = 0;
+            enemies = [];
+        }
+
+        function spawnEnemy() {
+            if (waitingForClear || isGameFinished) return;
+
+            let spawnCorrect = false;
+            if (Math.random() < 0.3 || wordsSpawnedInWave === WORDS_PER_WAVE - 1) {
+                spawnCorrect = true;
+            }
+
+            let wordText = "";
+            let isCorrect = false;
+
+            if (spawnCorrect) {
+                wordText = currentIdiom.customAnswer || currentIdiom.answer;
+                isCorrect = true;
+            } else {
+                let dIndex = Math.floor(Math.random() * currentIdiom.distractors.length);
+                wordText = currentIdiom.distractors[dIndex];
+                isCorrect = false;
+            }
+
+            enemies.push(new WordEnemy(wordText, isCorrect));
+            wordsSpawnedInWave++;
+        }
+
+        function resetWave() {
+            if (isGameFinished) return;
+            enemies.forEach(e => createExplosion(e.x, e.y, '#fff'));
+            enemies = [];
+            setTimeout(startNewIdiom, 1000);
+        }
+
+        function createExplosion(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        function logMistake(idiom) {
+            // Add to log if not already there (optional check, but good for summary)
+            mistakesLog.push(idiom);
+        }
+
+        function loseLife(reason) {
+            if (isGameFinished) return;
+            lives--;
+            updateUI();
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 500);
+
+            let flash = document.createElement('div');
+            flash.style.position = 'absolute';
+            flash.style.top = '0'; flash.style.left = '0';
+            flash.style.width = '100%'; flash.style.height = '100%';
+            flash.style.background = 'rgba(255,0,0,0.3)';
+            flash.style.pointerEvents = 'none';
+            container.appendChild(flash);
+            setTimeout(() => flash.remove(), 200);
+
+            if (lives <= 0) {
+                endGame(false);
+            }
+        }
+
+        function winGame() {
+            endGame(true);
+        }
+
+        function endGame(isWin) {
+            isGameFinished = true;
+            gameRunning = false;
+            missionPanel.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            finalScoreEl.innerText = score;
+
+            // Save Data
+            saveScoreData(playerName, playerGroup, score);
+
+            // Configure End Screen
+            if (isWin) {
+                endTitle.innerText = "¡ENHORABUENA!";
+                endTitle.style.webkitTextFillColor = "#00ff00";
+                endTitle.style.color = "#00ff00";
+                endMessage.innerText = "HAS ACERTADO CORRECTAMENTE TODAS";
+                endMessage.style.color = "#00ff00";
+            } else {
+                endTitle.innerText = "GAME OVER";
+                endTitle.style.webkitTextFillColor = "#ff0055";
+                endTitle.style.color = "#ff0055";
+                endMessage.innerText = "Misión fallida. La galaxia idiomática está en peligro.";
+                endMessage.style.color = "#fff";
+            }
+
+            // Build Error Report
+            let htmlContent = '';
+
+            if (isWin) {
+                htmlContent = '<h3 style="color:#00ff00; margin-top:0;">¡Misión Impecable!</h3>';
+            } else if (mistakesLog.length === 0) {
+                htmlContent = '<h3 style="color:#ff0055; margin-top:0;">Repaso</h3><p style="color:#aaa;">Sin errores específicos.</p>';
+            } else {
+                htmlContent = '<h3 style="color:#ff0055; margin-top:0; text-transform:uppercase;">Repaso de Errores</h3>';
+                // Show list in reverse chronological order (newest first)
+                mistakesLog.reverse().forEach(m => {
+                    htmlContent += `
+                    <div class="mistake-item">
+                        <div class="mistake-phrase">${m.phrase} <span style="color:#fff;">${m.answer}</span></div>
+                        <div class="mistake-meaning">${m.meaning}</div>
+                    </div>`;
+                });
+            }
+
+            mistakesContainer.innerHTML = htmlContent;
+        }
+
+        function updateUI() {
+            scoreEl.innerText = score;
+            livesEl.innerText = lives;
+            progressCountEl.innerText = idiomsSolved;
+        }
+
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (Math.random() < 0.2) stars.push({ x: Math.random() * width, y: -10, s: Math.random() * 2 });
+            ctx.fillStyle = '#fff';
+            for (let i = stars.length - 1; i >= 0; i--) {
+                let s = stars[i];
+                s.y += s.s * 2;
+                ctx.fillRect(s.x, s.y, s.s, s.s);
+                if (s.y > height) stars.splice(i, 1);
+            }
+
+            frame++;
+            spawnTimer++;
+
+            if (spawnTimer > 60) {
+                spawnEnemy();
+                spawnTimer = 0;
+            }
+
+            if (player) {
+                player.update();
+                player.draw();
+            }
+
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                let b = bullets[i];
+                b.update();
+                b.draw();
+                if (!b.active) bullets.splice(i, 1);
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                // SAFETY CHECK: If wave was reset, 'e' might be undefined
+                if (!e) continue;
+
+                e.update();
+                e.draw();
+
+                for (let j = bullets.length - 1; j >= 0; j--) {
+                    let b = bullets[j];
+                    if (b.x > e.x - e.width / 2 && b.x < e.x + e.width / 2 &&
+                        b.y > e.y - e.height / 2 && b.y < e.y + e.height / 2) {
+
+                        b.active = false;
+                        e.active = false;
+                        createExplosion(e.x, e.y, e.isCorrect ? '#00ffff' : '#ff0000');
+
+                        if (e.isCorrect) {
+                            score += 100;
+                            idiomsSolved++; // Increment progress
+                            updateUI();
+                            idiomTextEl.innerHTML = currentIdiom.phrase + " <span style='color:#00ffff'>" + currentIdiom.answer + "</span>";
+                            waitingForClear = true;
+                            setTimeout(resetWave, 1000);
+                        } else {
+                            // LOG MISTAKE: Shot wrong word
+                            logMistake(currentIdiom);
+                            loseLife();
+                        }
+                    }
+                }
+
+                if (!e.active) enemies.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('mousemove', e => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        window.addEventListener('mousedown', () => isMouseDown = true);
+        window.addEventListener('mouseup', () => isMouseDown = false);
+
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            mouseX = e.touches[0].clientX;
+            mouseY = e.touches[0].clientY;
+        }, { passive: false });
+        window.addEventListener('touchstart', (e) => {
+            mouseX = e.touches[0].clientX;
+            isMouseDown = true;
+        });
+        window.addEventListener('touchend', () => isMouseDown = false);
+
+        resize();
+
+    </script>
+</body>
+
+</html>
